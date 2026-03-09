@@ -1,0 +1,354 @@
+---
+title: "Week 3: Mortality II"
+subtitle: "SOC6708 ADA"
+author: "Hasani Rose"
+format: pdf
+execute: 
+  warning: false
+  message: false
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(readxl)
+library(janitor)
+install.packages("tinytex")
+
+rm(list = ls())
+options(warn = -1)
+```
+
+# Decomposition
+
+Let's read in WPP data from the first week week and calculate the age-specific mortality rates:
+
+```{r}
+# Population data
+d_male <- read_xlsx(here("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/WPP2024_POP_F01_2_POPULATION_SINGLE_AGE_MALE.xlsx"), skip = 16)
+d_male$sex <- "Male"
+d_male <- d_male |> drop_na(Year)
+
+d_female <- read_xlsx(here("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/WPP2024_POP_F01_3_POPULATION_SINGLE_AGE_FEMALE.xlsx"), skip = 16)
+d_female$sex <- "Female"
+d_female <- d_female |> drop_na(Year)
+
+d <- rbind(d_male, d_female)
+rm(d_male, d_female)
+
+# Mortality data
+d_male <- read_xlsx("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/WPP2024_MORT_F01_2_DEATHS_SINGLE_AGE_MALE.xlsx", skip = 16)
+d_male$sex <- "Male"
+d_male <- d_male |> drop_na(Year)
+
+d_female <- read_xlsx("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/WPP2024_MORT_F01_3_DEATHS_SINGLE_AGE_FEMALE.xlsx", skip = 16)
+d_female$sex <- "Female"
+d_female <- d_female |> drop_na(Year)
+
+dm <- rbind(d_male, d_female)
+rm(d_male, d_female)
+
+
+d <- d  |> 
+  clean_names() |> 
+  select(region_subregion_country_or_area, iso3_alpha_code, year, x0:sex) |>
+  rename(region = region_subregion_country_or_area) |> 
+  mutate(across(x0:x100, as.numeric))
+
+
+dm <- dm  |> 
+  clean_names() |> 
+  select(region_subregion_country_or_area, iso3_alpha_code, year, x0:sex) |> 
+  rename(region = region_subregion_country_or_area) |> 
+  mutate(across(x0:x100, as.numeric))
+
+d_long <- d  |>  
+  pivot_longer(x0:x100, names_to = "age", values_to = "pop") |> # Making data long
+  mutate(age = as.numeric(str_remove(age, "x")))
+
+dm_long <- dm  |>  
+  pivot_longer(x0:x100, names_to = "age", values_to = "deaths") |> 
+  mutate(age = as.numeric(str_remove(age, "x")))
+
+# join these two tibbles and calculate rates
+
+asmr <- d_long |>  
+  left_join(dm_long) |>  
+  mutate(mx = deaths/pop) #age-specific mortality rate 
+
+```
+
+Do the decomposition of the difference between Kenya and Canada:
+
+```{r}
+asmr |> 
+  #get data for Kenya
+  filter(region == "Kenya",year==2023)  |> 
+  select(sex, age, pop, mx) |> 
+  rename(pop_kenya = pop, mx_kenya = mx) |> 
+  #get data for Canada
+  left_join(asmr |> 
+              filter(region == "Canada",year==2023)  |> 
+              select(sex, age, pop, mx) |> 
+              rename(pop_can = pop, mx_can = mx) ) |> 
+  # calculate population proportions
+  mutate(prop_kenya = pop_kenya/sum(pop_kenya),
+         prop_can = pop_can/sum(pop_can)) |> 
+  mutate(rate_diff = mx_kenya - mx_can, # difference in mortality rates
+         prop_diff = prop_kenya - prop_can) |> # different in the pop proportions
+  mutate(ave_rate = (mx_kenya+mx_can)/2, # average mortality rate
+         ave_prop = (prop_kenya+prop_can)/2) |> #average pop proportion
+  mutate(age_contr = prop_diff*ave_rate, # age contribution
+         rate_contr = rate_diff*ave_prop) |> # mortality contribution
+  summarize(age_total_contr = sum(age_contr), # summing up over age
+            rate_total_contr = sum(rate_contr)) |> 
+  mutate(total_diff = age_total_contr+rate_total_contr)
+
+# age_total_contr = −0.0107; The negative sign means Kenya’s age structure lowers its crude death rate relative to Canada. Kenya has a much younger population.
+
+# rate_total_contr = +0.00998;  The positive sign means Kenya’s age-specific mortality risks are higher than Canada’s. Higher risks push Kenya’s crude death rate upward relative to Canada
+
+# total_diff = −0.000724; This is the net difference in crude death rates. Kenya’s crude death rate is only slightly lower than Canada’s, not because mortality is better, but because its youthful age structure masks higher mortality risks
+```
+
+Check that the difference is actually the difference between the two CDRs
+
+```{r}
+asmr |> 
+  filter(region == "Kenya"|region=="Canada",year==2023) |> 
+  group_by(region) |> 
+  summarize(cdr = sum(mx*pop)/sum(pop)) |> # Computes the crude death rate for each country
+  summarise(diff = cdr[region=="Kenya"] - cdr[region=="Canada"]) # The difference
+```
+
+## Exercise
+
+Decompose the difference in CDRs between USA and Japan in the year 2023. Is the majority of the difference due to age structure or mortality?
+
+```{r}
+asmr |> 
+  #get data for United States
+  filter(region == "United States of America",year==2023)  |> 
+  select(sex, age, pop, mx) |> 
+  rename(pop_usa = pop, mx_usa = mx) |> 
+  #get data for Canada
+  left_join(asmr |> 
+              filter(region == "Japan",year==2023)  |> 
+              select(sex, age, pop, mx) |> 
+              rename(pop_jpn = pop, mx_jpn = mx) ) |> 
+  # calculate population proportions
+  mutate(prop_usa = pop_usa/sum(pop_usa),
+         prop_jpn = pop_jpn/sum(pop_jpn)) |> 
+  mutate(rate_diff = mx_usa - mx_jpn, # difference in mortality rates
+         prop_diff = prop_usa - prop_jpn) |> # different in the pop proportions
+  mutate(ave_rate = (mx_usa+mx_jpn)/2, # average mortality rate
+         ave_prop = (prop_usa+prop_jpn)/2) |> #average pop proportion
+  mutate(age_contr = prop_diff*ave_rate, # age contribution
+         rate_contr = rate_diff*ave_prop) |> # mortality contribution
+  summarize(age_total_contr = sum(age_contr), # summing up over age
+            rate_total_contr = sum(rate_contr)) |> 
+  mutate(total_diff = age_total_contr+rate_total_contr)
+
+## Japan’s higher crude death rate relative to the USA in 2023 is driven primarily by differences in age structure
+```
+
+
+
+
+# Mortality models
+
+Read in mortality rates for Ontario. These data come from the [Canadian Human Mortality Database](http://www.bdlc.umontreal.ca/chmd/prov/ont/ont.htm). 
+
+```{r}
+dm2 <- read_table("https://www.prdh.umontreal.ca/BDLC/data/ont/Mx_1x1.txt", skip = 2, col_types = "dcddd")
+head(dm2)
+```
+
+## Gompertz
+
+Let's fit a Gompertz model to Male mortality rates in the year 1950 from age 40. What is the interpretation of the coefficient estimates?
+
+```{r}
+# clean up a bit
+dm2 <- dm2 |> 
+  clean_names() |> 
+  mutate(age = as.numeric(age))
+
+df_1950_40 <- dm2 |> 
+  filter(year==1950, age>39) |> 
+  select(age, male) 
+
+df_1950_40 |> 
+  ggplot(aes(age, male)) + 
+  geom_point()+
+  scale_y_log10()
+
+# remove above 100
+df_1950_40 <- df_1950_40 |> 
+  filter(age<100)
+
+summary(lm(log(male)~age, data = df_1950_40))
+
+## each additional year of age increases mortality by 8.6%
+```
+
+### Exercise
+
+Now fit a Gompertz model to male mortality rates form age 40 in every year. Plot the estimated alpha and beta coefficients in a scatter plot, color the points by year. Comment on what you observe. 
+
+```{r}
+dm_to_fit <- dm2 |>   # Preparing the data to be modeled
+  filter(age>39, age<100) |> 
+  select(year, age, male)
+
+coefs <- tibble() # creates an empty table to store results
+
+years <- unique(dm_to_fit$year) # extracts all distinct years in the data
+
+for(i in 1:length(years)){ # This loop runs once per year
+  this_df <- dm_to_fit |>
+    filter(year == years[i], !is.na(male), male > 0) # Subset data to a single year
+    
+    ####SOMETHING
+  
+  this_mod <- lm(log(male)~age, data = this_df) # Fit the Gompertz model
+  
+  these_coefs <- tibble(alpha = exp(coef(this_mod)[1]), beta = coef(this_mod)[2])
+  
+  coefs <- bind_rows(coefs, these_coefs)
+  
+}
+  
+## A decline in baseline adult mortality (α) alongside a gradual increase in the rate of 
+#aging (β). Improvements in survival at adult ages combined with increasing compression of mortality into older age
+```
+
+## Lee-Carter
+
+
+Let's get the Lee-carter model parameters for Ontario. First, get the matrix of age-specific rates:
+
+```{r}
+m_tx <- dm2 |> 
+  filter(age < 101) |> 
+  select(year, age, male) |> 
+  pivot_wider(names_from = "age", values_from = "male") |> 
+  select(-year) |> 
+  as.matrix()
+
+ages <- 0:100
+years <- unique(dm2$year)
+```
+
+log and demean those rates:
+
+```{r}
+logm_tx <- log(m_tx)
+logm_tx[is.infinite(logm_tx)] <- min(logm_tx[!is.infinite(logm_tx)])
+ax <- apply(logm_tx, 2, mean) # the mean across all years by age
+```
+
+Do the SVD
+
+```{r}
+swept_logm_tx <- sweep(logm_tx, 2, ax)
+
+svd_mx <- svd(swept_logm_tx)
+
+names(svd_mx)
+svd_mx$d
+
+bx <- svd_mx$v[, 1]/sum(svd_mx$v[, 1]) # should have 100 entries, looking at age groups
+kt <- svd_mx$d[1] * svd_mx$u[, 1] * sum(svd_mx$v[, 1]) 
+
+```
+
+Plots!
+
+```{r}
+# plot ax
+
+lc_age_df <- tibble(age = ages, ax = ax, bx = bx)
+lc_time_df <- tibble(year = years, kt = kt)
+
+ggplot(lc_age_df, aes(age, ax)) + 
+  geom_line(lwd = 1.1) + 
+  ggtitle("ax values for Ontario")
+
+ggplot(lc_age_df, aes(age, bx)) + 
+  geom_line(lwd = 1.1) + 
+  ggtitle("bx values for Ontario")
+
+ggplot(lc_time_df, aes(year, kt)) + 
+  geom_line(lwd = 1.1) + 
+  ggtitle("kt values for Ontario")
+
+```
+
+let's look at the fit for a couple of years
+
+```{r}
+data_and_res <- dm2 |>  # Build a dataset with the observed data and Lee–Carter parameters
+  filter(age < 101) |> 
+  mutate(log_mx = log(male)) |> 
+  left_join(lc_age_df) |>  # Adding age specific parameters
+  left_join(lc_time_df) |> 
+  mutate(lc_fit = ax + bx*kt)
+
+data_and_res |>  # Plot observed vs fitted for selected years
+  filter(year %in% c(1921, 1951, 1981, 2011, 2021)) |> 
+  ggplot(aes(age, log_mx)) + geom_point() + 
+  facet_wrap(~year) + 
+  geom_line(aes(age, lc_fit), color = "red") + 
+  ggtitle("Data and fits for Ontario")
+
+```
+
+### Exercise
+
+Repeat the lee-carter model fitting exercise but just use mortality rates from 1970. Does this change the estimated rates? Does it do a better or worse job, or does it depend on the year? 
+
+## filter ages and look years
+
+```{r}
+# Restrict the data
+dm2_1970 <- dm2 |> 
+  filter(year >= 1970, age < 101)
+# Build mortality matrix
+m_tx_1970 <- dm2_1970 |> 
+  select(year, age, male) |> 
+  pivot_wider(names_from = age, values_from = male) |> 
+  select(-year) |> 
+  as.matrix()
+
+logm_tx_1970 <- log(m_tx_1970)
+logm_tx_1970[is.infinite(logm_tx_1970)] <- 
+  min(logm_tx_1970[!is.infinite(logm_tx_1970)])
+
+ax_1970 <- apply(logm_tx_1970, 2, mean)
+
+swept_1970 <- sweep(logm_tx_1970, 2, ax_1970)
+
+svd_1970 <- svd(swept_1970)
+
+bx_1970 <- svd_1970$v[,1] / sum(svd_1970$v[,1])
+kt_1970 <- svd_1970$d[1] * svd_1970$u[,1] * sum(svd_1970$v[,1])
+
+# Ploting
+
+lc_age_1970 <- tibble(age = 0:100, ax = ax_1970, bx = bx_1970)
+lc_time_1970 <- tibble(year = unique(dm2_1970$year), kt = kt_1970)
+
+dm2_1970 |> 
+  mutate(log_mx = log(male)) |> 
+  left_join(lc_age_1970) |> 
+  left_join(lc_time_1970) |> 
+  mutate(lc_fit = ax + bx*kt) |> 
+  filter(year %in% c(1971, 1981, 1991, 2001, 2011, 2021)) |> 
+  ggplot(aes(age, log_mx)) +
+  geom_point() +
+  geom_line(aes(y = lc_fit), color = "red") +
+  facet_wrap(~year)
+
+## Slightly changes bx. Does a better job for recent years.
+```

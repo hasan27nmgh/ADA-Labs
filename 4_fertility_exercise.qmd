@@ -1,0 +1,311 @@
+---
+title: "Week 4: Fertility"
+subtitle: "SOC6708 ADA"
+author: "Monica Alexander"
+format: pdf
+execute: 
+  warning: false
+  message: false
+---
+
+# NRRs
+
+```{r}
+library(tidyverse)
+library(here)
+library(readxl)
+library(janitor)
+```
+
+Read in WPP data (you will need to download the first two files from the UNPD website):
+
+```{r}
+df <- read_csv("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/WPP2024_Fertility_by_Age5.csv")
+dl <- read_csv("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/WPP2024_Life_Table_Abridged_Medium_1950-2023.csv")
+dp <- read_csv("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/wpp_pop_clean.csv")
+```
+
+## Exercise
+
+Choose three countries in varying demographic stages and calculate and plot the NRR over time. Also plot population pyramids for these same countries (one recent, one from 1970) and discuss how population growth/decline and NRR are related. 
+
+```{r}
+
+### Mexico
+fx_mex <- df %>% 
+  filter(Location == "Mexico", Variant == "Medium") %>% # keeps the medium                                                                 fertility projection
+  select(Location, Time, AgeGrp, ASFR) %>% 
+  mutate(ASFR = ASFR/1000) # ASFRs are usually reported as “births per 1,000 women”
+                           # But we need births per woman for calculations
+# this fertility
+
+# now clean up life table
+lx_mex <- dl %>% 
+  filter(Location == "Mexico", Sex == "Female") %>% 
+  select(Location, Time, AgeGrp, Lx) %>% 
+  mutate(Lx = Lx / 10^5)
+
+ffab <- 0.4886
+
+nrrs_mex <- fx_mex %>% 
+  left_join(lx_mex) %>% # fertility at that age, and probability of women surviving                         to that age
+                        # have lost first and last age groups, but doesn't matter                          for this cause they zeros re: fertility
+  mutate(prod = ASFR*Lx) %>% # Expected daughters born at that age
+  group_by(Time) %>%  # one NRR per year
+  summarize(NRR = sum(prod)*ffab) %>% 
+  drop_na()
+
+nrrs_mex %>%  # Plotting NRR over time
+  ggplot(aes(Time, NRR)) +
+  geom_line()+
+  labs(title = "NRR for Mexico")
+
+
+mex_pop_long <- dp |>   # Plotting population pyramid
+  filter(region == "Mexico", year %in% c(1970, 2023)) |> 
+  pivot_longer(x0:x100, names_to = "age", values_to = "pop") |> 
+  mutate(age = as.numeric(gsub("x", "", age)),
+         pop = ifelse(sex == "Male", -pop, pop))
+
+ggplot(mex_pop_long, aes(x = age, y = pop, fill = sex)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_flip() +
+  facet_wrap(~year) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    title = "Population pyramids for Mexico",
+    x = "Age",
+    y = "Population"
+  )
+
+### Mexico’s NRR was well above one in the mid-20th century, indicating strong generational replacement and rapid population growth, which is reflected in the wide-based population pyramid in 1970. Since the late 1970s, NRR has declined steadily and fallen below one in recent years, corresponding to the much narrower base and population aging seen in the 2023 pyramid.
+
+
+### Canada 
+
+fx_can <- df %>% 
+  filter(Location == "Canada", Variant == "Medium") %>% # keeps the medium                                                                 fertility projection
+  select(Location, Time, AgeGrp, ASFR) %>% 
+  mutate(ASFR = ASFR/1000) # ASFRs are usually reported as “births per 1,000 women”
+                           # But we need births per woman for calculations
+# this fertility
+
+# now clean up life table
+lx_can <- dl %>% 
+  filter(Location == "Canada", Sex == "Female") %>% 
+  select(Location, Time, AgeGrp, Lx) %>% 
+  mutate(Lx = Lx / 10^5)
+
+ffab <- 0.4886
+
+nrrs_can <- fx_can %>% 
+  left_join(lx_can) %>% # fertility at that age, and probability of women surviving                         to that age
+                        # have lost first and last age groups, but doesn't matter                          for this cause they zeros re: fertility
+  mutate(prod = ASFR*Lx) %>% # Expected daughters born at that age
+  group_by(Time) %>%  # one NRR per year
+  summarize(NRR = sum(prod)*ffab) %>% 
+  drop_na()
+
+nrrs_can %>%  # Plotting NRR over time
+  ggplot(aes(Time, NRR)) +
+  geom_line()+
+  labs(title = "NRR for Canada")
+
+
+can_pop_long <- dp |>   # Plotting population pyramid
+  filter(region == "Canada", year %in% c(1970, 2023)) |> 
+  pivot_longer(x0:x100, names_to = "age", values_to = "pop") |> 
+  mutate(age = as.numeric(gsub("x", "", age)),
+         pop = ifelse(sex == "Male", -pop, pop))
+
+ggplot(can_pop_long, aes(x = age, y = pop, fill = sex)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_flip() +
+  facet_wrap(~year) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    title = "Population pyramids for Canada",
+    x = "Age",
+    y = "Population"
+  )
+
+### Canada’s NRR was above one in the mid-20th century (though lower than that of Mexico) indicating more-than-replacement fertility, which is reflected in the relatively wide base of the 1970 population pyramid. Since the late 1960s, NRR has remained consistently below one, corresponding to the narrowing base and pronounced population aging seen in the 2023 pyramid.
+
+### United States
+
+fx_usa <- df %>% 
+  filter(Location == "United States of America", Variant == "Medium") %>% # keeps the medium                                                                 fertility projection
+  select(Location, Time, AgeGrp, ASFR) %>% 
+  mutate(ASFR = ASFR/1000) # ASFRs are usually reported as “births per 1,000 women”
+                           # But we need births per woman for calculations
+# this fertility
+
+# now clean up life table
+lx_usa <- dl %>% 
+  filter(Location == "United States of America", Sex == "Female") %>% 
+  select(Location, Time, AgeGrp, Lx) %>% 
+  mutate(Lx = Lx / 10^5)
+
+ffab <- 0.4886
+
+nrrs_usa <- fx_usa %>% 
+  left_join(lx_usa) %>% # fertility at that age, and probability of women surviving                         to that age
+                        # have lost first and last age groups, but doesn't matter                          for this cause they zeros re: fertility
+  mutate(prod = ASFR*Lx) %>% # Expected daughters born at that age
+  group_by(Time) %>%  # one NRR per year
+  summarize(NRR = sum(prod)*ffab) %>% 
+  drop_na()
+
+nrrs_usa %>%  # Plotting NRR over time
+  ggplot(aes(Time, NRR)) +
+  geom_line()+
+  labs(title = "NRR for United States of America")
+
+
+usa_pop_long <- dp |>   # Plotting population pyramid
+  filter(region == "United States of America", year %in% c(1970, 2023)) |> 
+  pivot_longer(x0:x100, names_to = "age", values_to = "pop") |> 
+  mutate(age = as.numeric(gsub("x", "", age)),
+         pop = ifelse(sex == "Male", -pop, pop))
+
+ggplot(usa_pop_long, aes(x = age, y = pop, fill = sex)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_flip() +
+  facet_wrap(~year) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    title = "Population pyramids for United States of America",
+    x = "Age",
+    y = "Population"
+  )
+
+### Similar to Canada, the United States had an NRR above one in the mid-20th century, reflected in the relatively broad base of the 1970 population pyramid. Since the 1970s, NRR has fluctuated around replacement but has remained below one in recent years, corresponding to a more rectangular and aging population structure in 2023.
+
+```
+
+
+# Parity
+
+For this section, I pulled Canadian census data from 2011 from [IPUMS](https://international.ipums.org/international/) and did some reshaping to get mothers and their children:
+
+```{r}
+d <- read_csv("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/canada_parity.csv")
+```
+
+Let's look at sex ratios by parity:
+
+```{r}
+dy <- d |> 
+  filter(child_age_1<21)
+
+pf1 <- dy |> 
+  group_by(child_age_1) |> 
+  summarise(prop_female1 = sum(child_sex_1==2)/n()) |> 
+  rename(age = child_age_1)
+
+pf2 <- dy |> 
+  group_by(child_age_2) |> 
+  summarise(prop_female2 = sum(child_sex_2==2)/n()) |> 
+  rename(age = child_age_2)
+
+pf3 <- dy |> 
+  group_by(child_age_3) |> 
+  summarise(prop_female3 = sum(child_sex_3==2)/n()) |> 
+  rename(age = child_age_3)
+
+
+pf1 |> 
+  left_join(pf2) |> 
+  left_join(pf3) |>
+  pivot_longer(-age, names_to = "parity", values_to = "prop_female") |> 
+  mutate(parity = as.numeric(substr(parity, nchar(parity), nchar(parity)))) |> 
+  ggplot(aes(age, prop_female, color = factor(parity))) + 
+  geom_line(alpha = 0.5) + 
+  ggtitle("Proportion of females by age and parity") +
+  geom_hline(yintercept = 0.4886)+
+  geom_smooth(method = "lm", se = F, formula = y ~ 1)+
+  scale_color_discrete(name = "Parity")+
+  labs(y = "proportion female", x = "age of child")
+
+```
+
+Now let's look at parity progression from 1 to 2 based on sex of first child:
+
+```{r}
+ppr1 <- dy |> 
+  group_by(child_age_1, child_sex_1) |> 
+  summarise(ppr1 = sum(nchild>1)/n()) |> 
+  rename(sex = child_sex_1, age = child_age_1)
+
+ppr1 |> 
+  rename(ppr = ppr1) |> 
+  mutate(sex = ifelse(sex == 2, "female", "male")) %>% #?
+  ggplot(aes(age, ppr, color = factor(sex))) + 
+  geom_point()+
+  ggtitle("Parity progression ratios for 1st to 2nd child by sex of first child")  +
+  scale_color_discrete(name = "Sex of first child")+labs(x = "age of child")
+```
+
+What about from 2 to 3, based on the sex of the first two?
+
+```{r}
+ppr2_m <- dy |> 
+  filter(child_age_2<16) |> 
+  filter(child_sex_1==1) |> 
+  group_by(child_age_2, child_sex_2) |> 
+  summarise(ppr2 = sum(nchild>2)/n()) |> 
+  rename(sex = child_sex_2, age = child_age_2) |> 
+  mutate(sex1 = "first born is male")
+
+ppr2_f <- dy |> 
+  filter(child_age_2<16) |> 
+  filter(child_sex_1==2) |> 
+  group_by(child_age_2, child_sex_2) |> 
+  summarise(ppr2 = sum(nchild>2)/n()) |> 
+  rename(sex = child_sex_2, age = child_age_2) |> 
+  mutate(sex1 = "first born is female")
+
+ppr2_m |> 
+  bind_rows(ppr2_f) |> 
+  mutate(sex = ifelse(sex == 1, "Male", "Female")) |> 
+  ggplot(aes(age, ppr2, color = factor(sex))) + facet_grid(~sex1) + 
+  geom_point() + 
+  ggtitle("Parity progression ratios to third child by sex of first two children \nCanada 2011") + 
+  scale_color_discrete(name = "sex of second born") + 
+  ylab("PPR")+xlab("age of child")
+```
+
+## Exercise
+
+Repeat the graph above (PPR from 2 to 3, based on sex of first two children), but plot by age group of mother. Comment on observatios in one sentence. 
+
+```{r}
+ppr2_m_m <- dy |> 
+  filter(child_age_2<16) |> 
+  filter(child_sex_1==1) |> 
+  group_by(age_group, child_sex_2) |> 
+  summarise(ppr2 = sum(nchild>2)/n()) |> 
+  rename(sex = child_sex_2, age = age_group) |> 
+  mutate(sex1 = "first born is male")
+
+
+ppr2_f_m <- dy |> 
+  filter(child_age_2<16) |> 
+  filter(child_sex_1==2) |> 
+  group_by(age_group, child_sex_2) |> 
+  summarise(ppr2 = sum(nchild>2)/n()) |> 
+  rename(sex = child_sex_2, age = age_group) |> 
+  mutate(sex1 = "first born is female")
+
+ppr2_m_m |> 
+  bind_rows(ppr2_f_m) |> 
+  mutate(sex = ifelse(sex == 1, "Male", "Female")) |> 
+  ggplot(aes(age, ppr2, color = factor(sex))) + facet_grid(~sex1) + 
+  geom_point() + 
+  ggtitle("Parity progression ratios to third child by sex of first two children \nCanada 2011") + 
+  scale_color_discrete(name = "sex of second born") + 
+  ylab("PPR")+xlab("age of mother")
+
+### Parity progression from the second to third child is highest at younger and mid maternal ages and declines sharply at older ages,
+```
+
