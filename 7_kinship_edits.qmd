@@ -66,7 +66,7 @@ fert |>
   scale_color_brewer(name = "Year")+
   labs(y = "Age-specific fertility rate", title = "Fertility over time in Kenya")
 
-mort |>
+mort |> # Survivorship
   filter(Time %in% seq(1950, 2020, by = 10)) |>
   ggplot(aes(age, lx, color = factor(Time))) +
   geom_line() +
@@ -77,13 +77,13 @@ mort |>
     title = "Female survivorship over time in Kenya"
   )
 
-mort_qx <- mort |>
+mort_qx <- mort |> 
   arrange(Time, age) |>
   group_by(Time) |>
   mutate(qx_approx = 1 - lead(lx) / lx) |>
   ungroup()
 
-mort_qx |>
+mort_qx |> # Probability of dying
   filter(Time %in% seq(1950, 2020, by = 10)) |>
   ggplot(aes(age, qx_approx, color = factor(Time))) +
   geom_line() +
@@ -434,4 +434,5 @@ kin_compare |>
 ### In both countries, the number of daughters, sisters, nieces, cousins, and aunts increases during early adulthood and middle age and then declines at older ages. The number of mothers and grandmothers decreases steadily as the focal woman ages. 
 ### However, France tends to have slightly higher numbers of several kin types, including daughters, sisters, nieces, cousins, and granddaughters, compared to Canada. This may suggest somewhat higher fertility in France, which leads to larger extended family networks.
 ```
+
 
