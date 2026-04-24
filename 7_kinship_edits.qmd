@@ -1,7 +1,7 @@
 ---
 title: "Week 7: Kinship"
 subtitle: "SOC6708 ADA"
-author: "Monica Alexander"
+author: "Monica Alexander and Hasani Rose"
 format: pdf
 execute: 
   warning: false
@@ -66,7 +66,7 @@ fert |>
   scale_color_brewer(name = "Year")+
   labs(y = "Age-specific fertility rate", title = "Fertility over time in Kenya")
 
-mort |> # Survivorship
+mort |>
   filter(Time %in% seq(1950, 2020, by = 10)) |>
   ggplot(aes(age, lx, color = factor(Time))) +
   geom_line() +
@@ -77,13 +77,13 @@ mort |> # Survivorship
     title = "Female survivorship over time in Kenya"
   )
 
-mort_qx <- mort |> 
+mort_qx <- mort |>
   arrange(Time, age) |>
   group_by(Time) |>
   mutate(qx_approx = 1 - lead(lx) / lx) |>
   ungroup()
 
-mort_qx |> # Probability of dying
+mort_qx |>
   filter(Time %in% seq(1950, 2020, by = 10)) |>
   ggplot(aes(age, qx_approx, color = factor(Time))) +
   geom_line() +
@@ -133,9 +133,8 @@ fert |>
   ggplot(aes(Time, TFR))+
   geom_line()
 
-## Both trajectories broadly follow the same pattern, but they are not the same. Both increase slightly from the 1950s to the 1970s and then decline steadily from the 1980s onward. However, the number of surviving daughters is consistently lower than the TFR and declines more gradually. This is because the surviving daughters measure incorporates mortality as well as fertility.
 ```
-
+Both trajectories broadly follow the same pattern, but they are not the same. Both increase slightly from the 1950s to the 1970s and then decline steadily from the 1980s onward. However, the number of surviving daughters is consistently lower than the TFR and declines more gradually. This is because the surviving daughters measure incorporates mortality as well as fertility.
 
 
 ## Surviving mothers
@@ -430,9 +429,8 @@ kin_compare |>
     color = "Country",
     title = "Kinship structure of women: Canada vs France"
   )
-
-### In both countries, the number of daughters, sisters, nieces, cousins, and aunts increases during early adulthood and middle age and then declines at older ages. The number of mothers and grandmothers decreases steadily as the focal woman ages. 
-### However, France tends to have slightly higher numbers of several kin types, including daughters, sisters, nieces, cousins, and granddaughters, compared to Canada. This may suggest somewhat higher fertility in France, which leads to larger extended family networks.
 ```
+In both countries, the number of daughters, sisters, nieces, cousins, and aunts increases during early adulthood and middle age and then declines at older ages. The number of mothers and grandmothers decreases steadily as the focal woman ages. 
 
+However, France tends to have slightly higher numbers of several kin types, including daughters, sisters, nieces, cousins, and granddaughters, compared to Canada. This may suggest somewhat higher fertility in France, which leads to larger extended family networks.
 

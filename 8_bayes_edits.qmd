@@ -1,7 +1,7 @@
 ---
 title: "Week 9: Intro to Bayes"
-date: today
-date-format: "DD/MM/YY"
+subtitle: "SOC6708 ADA"
+author: "Monica Alexander and Hasani Rose"
 format: pdf
 execute: 
   warning: false
@@ -21,8 +21,8 @@ n <- 129
 # mean
 y/n
 
-### The estimated proportion of women who report being happy is: 0.915 (or 91.5%)
 ```
+The estimated proportion of women who report being happy is: 0.915 (or 91.5%)
 
 ```{r}
 p <- y/n
@@ -31,9 +31,8 @@ se <- sqrt(p*(1-p)/n)
 p - 1.96*se
 p + 1.96*se
 
-### The 95% confidence interval is: [0.867, 0.963]
 ```
-
+The 95% confidence interval is: [0.867, 0.963]
 
 ## Question 2
 
@@ -46,17 +45,17 @@ a <- 1
 b <- 1
 
 p_bayes <- (y+a)/(n+a+b)
-### The posterior mean is 0.908 (or 90.8%)
-### After combining the prior information and the observed data, the estimated proportion of women who are happy is about 90.8%
 
 qbeta(0.025, y+a, n-y+b)
 qbeta(0.975, y+a, n-y+b)
 
-### the 95% credible interval is: [0.854, 0.951]
 
-### The prior is weak and the sample is fairly large; hence, probably why the Bayesian and frequentist answers are very similar
 ```
+The posterior mean is 0.908 (or 90.8%)
+After combining the prior information and the observed data, the estimated proportion of women who are happy is about 90.8%
 
+The 95% credible interval is: [0.854, 0.951]
+The prior is weak and the sample is fairly large; hence, probably why the Bayesian and frequentist answers are very similar
 
 ## Question 3
 
@@ -70,20 +69,23 @@ b <- 10
 
 p_bayes <- (y+a)/(n+a+b)
 p_bayes
-###posterior mean is: posterior mean = 0.859
+
 
 qbeta(0.025, y+a, n-y+b)
 qbeta(0.975, y+a, n-y+b)
-### 95% credible interval = [0.799, 0.910]
 
-### With the Beta(10,10) prior, before seeing the data, we believe the true value of  θ is probably around 0.5, and values near 0 or 1 are less likely.
-### With Beta(1,1), we had no strong prior belief; all values between 0 and 1 were equally likely. But with Beta(10,10), we do have a prior belief, and it is stronger: we think θ is likely to be near 0.5. Hence, we have more prior information
-### The posterior estimate is pulled downward relative to the sample proportion and the posterior from Question 2
+
 
 ```
+Posterior mean is: posterior mean = 0.859
 
+95% credible interval = [0.799, 0.910]
 
+With the Beta(10,10) prior, before seeing the data, we believe the true value of  θ is probably around 0.5, and values near 0 or 1 are less likely.
 
+With Beta(1,1), we had no strong prior belief; all values between 0 and 1 were equally likely. But with Beta(10,10), we do have a prior belief, and it is stronger: we think θ is likely to be near 0.5. Hence, we have more prior information
+
+The posterior estimate is pulled downward relative to the sample proportion and the posterior from Question 2
 
 ```{r}
 # prior Beta (1,1) == Uniform(0,1)
@@ -91,9 +93,6 @@ qbeta(0.975, y+a, n-y+b)
 a <- 10
 b <- 100
 
-### Here we have a prior that assumes, before seeing any data, that about 9% of women are happy
-
-### 10 “successes” and 100 “failures”, which is a lot of prior information
 
 p_bayes <- (y+a)/(n+a+b)
 p_bayes
@@ -101,8 +100,13 @@ p_bayes
 qbeta(0.025, y+a, n-y+b)
 qbeta(0.975, y+a, n-y+b)
 
-### Pulls down the mean down a lot
 ```
+Here we have a prior that assumes, before seeing any data, that about 9% of women are happy
+
+10 “successes” and 100 “failures”, which is a lot of prior information
+
+This pulls down the mean a lot
+
 
 ```{r}
 library(tidyverse)
@@ -156,11 +160,16 @@ x_multiplier <- (10.65-12.55*(dp5_23$pop[dp5_23$age_group==25]+dp5_23$pop[dp5_23
 xTFR <- x_multiplier*C/W
 xTFR
 
-## Indirect estimate is 1.448, slightly lower than the simple iTFR.
 
 # the actual TFR is
 df |> filter(Location=="Canada") |> select(Time, TFR)
 df |> filter(Location=="Canada", Time == 2023) |> select(Time, TFR)
-### The actual TFR for Canada in 2023 is 1.3494. Hence, both indirect estimates overestimated, though the xTFR was slightly closer
 ```
+The simple iTFR estimate is 1.48
+
+xTFR is 1.448, slightly lower than the simple iTFR.
+
+The actual TFR for Canada in 2023 is 1.3494. Hence, both indirect estimates overestimated, though the xTFR was slightly closer
+
+
 

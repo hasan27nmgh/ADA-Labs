@@ -1,7 +1,7 @@
 ---
 title: "Week 10: Multilevel regression and post-stratification"
-date: today
-date-format: "DD/MM/YY"
+subtitle: "SOC6708 ADA"
+author: "Monica Alexander and Hasani Rose"
 format: pdf
 number-sections: true
 execute: 
@@ -73,7 +73,7 @@ d |>
   geom_point()+
   facet_wrap(~educ_cat)
 
-# Probability of wanting more children by age and education; exclusing 15-19 |> 
+# Probability of wanting more children by age and education; exclusing 15-19 
 d |> 
  filter(age_gp != "15-19") |> 
   group_by(age_gp, educ_cat) |> 
@@ -104,15 +104,20 @@ resp4 <- d |> filter(age_gp!="15-19")  |> drop_na() |> mutate(age_gp = as_factor
 
 mod <- glmer(wants_more_kids ~ marital_formal + (1|age_gp) + (1|educ_cat), data = resp4, family = "binomial")
 summary(mod)
-### Married women are more likely to want more kids. Never married women are even more likely. Reference group is Formely Married
-### Age explains quite a bit of the variation, and education explains some
 
 mod_parity <- glmer(wants_more_kids ~ marital_formal + (1|age_gp) + (parity|educ_cat), data = resp4, family = "binomial")
 summary(mod_parity)
-### The effect of parity (number of kids) can vary by education
+
 ranef(mod_parity)
-### The second model is better
 ```
+Married women are more likely to want more kids. Never married women are even more likely. Reference group is Formerly Married
+
+Age explains quite a bit of the variation, and education explains some
+
+The effect of parity (number of kids) can vary by education
+
+The second model is better
+
 
 Note! This can also be done in Stan, in a Bayesian framework. This is useful if you want to e.g. play around with the structure of the hierarchical model, which is much easier to control in this framework. 
 
@@ -134,9 +139,10 @@ mod1 <- stan(data = stan_data1,
 summary(mod1)$summary[c("beta0", "beta1", "beta2", "sigma_a", "sigma_e"),
                       c("mean", "se_mean", "n_eff", "Rhat")]
 
-### Compared to the reference group, never-married women are the most likely to want more children.
-### Model converged well, and there is substantial variation across groups, with marital status significantly affecting fertility intentions.
 ```
+Compared to the reference group, never-married women are the most likely to want more children.
+
+Model converged well, and there is substantial variation across groups, with marital status significantly affecting fertility intentions.
 
 To pull out the estimates from `lme4`:
 
@@ -145,8 +151,8 @@ mod
 coef(mod)
 fixef(mod)
 ranef(mod)
-### Younger and more highly educated women having higher baseline probabilities
 ```
+Younger and more highly educated women having higher baseline probabilities
 
 ## Question
 
@@ -157,9 +163,10 @@ summary(glm(wants_more_kids ~ marital_formal + age_gp + educ_cat, data = resp4, 
 standard_mod = glm(wants_more_kids ~ marital_formal + age_gp + educ_cat, data = resp4, family = "binomial")
 AIC(mod, standard_mod)
 
-### The multilevel model has a higher AIC (4331) compared to the standard logistic regression model (4295). Though the multilevel model still be conceptually useful since it accounts for hierarchical structure and allows for partial pooling across groups
+
 ```
 
+The multilevel model has a higher AIC (4331) compared to the standard logistic regression model (4295). Though the multilevel model still be conceptually useful since it accounts for hierarchical structure and allows for partial pooling across groups
 
 # Post stratification
 
@@ -215,9 +222,9 @@ cell_counts |>
   geom_bar(stat = "identity", position = "dodge") + 
   facet_grid(edu~marital)
 
-### Overall, the distributions are similar in some cells, but there are also noticeable differences, with some groups appearing overrepresented or underrepresented in the survey relative to ACS
 ```
 
+Overall, the distributions are similar in some cells, but there are also noticeable differences, with some groups appearing overrepresented or underrepresented in the survey relative to ACS
 
 ## Standard post-stratification
 
@@ -274,8 +281,9 @@ ps_age |>
   bind_rows(raw_age) |> 
   ggplot(aes(age_gp, proportion, fill = estimate))+
   geom_bar(stat = "identity", position = "dodge")
-### Proportion going down by age 
 ```
+
+Proportion going down as age increases
 
 ## Question
 
@@ -318,11 +326,11 @@ raw_edu |>
   geom_bar(stat = "identity", position = "dodge") +
   labs(x = "Education", y = "Proportion wanting more children")
 
-### Across the three methods, Women with Bachelor+ and Some College have the highest probabilities, and women with HS and <HS have lower probabilities.
-### Post-stratification and MRP slightly adjust the raw estimates, generally lowering them for lower education groups, suggesting that the survey slightly overestimates fertility intentions for these groups.
-
 ```
 
+Across the three methods, Women with Bachelor+ and Some College have the highest probabilities, and women with HS and <HS have lower probabilities.
+
+Post-stratification and MRP slightly adjust the raw estimates, generally lowering them for lower education groups, suggesting that the survey slightly overestimates fertility intentions for these groups.
 
 
 

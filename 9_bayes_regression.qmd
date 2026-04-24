@@ -1,6 +1,7 @@
 ---
 title: "Week 9: Bayesian regression"
-author: "Monica Alexander"
+subtitle: "SOC6708 ADA"
+author: "Monica Alexander and Hasani Rose"
 format: pdf
 number-sections: true
 execute: 
@@ -133,9 +134,11 @@ pars <- c("log_alpha", "beta")
 traceplot(mod, pars = c("beta"))
 pairs(mod, pars = pars)
 
-### Chains are overlapping a lot; flutuating within the same range
-### Off-diagonal plots show negative relationship
+
 ```
+
+Chains are overlapping a lot; fluCtuating within the same range
+Off-diagonal plots show negative relationship
 
 ```{r}
 temp <- rstan::extract(mod)
@@ -183,8 +186,10 @@ mod |>
   mutate(mode_age = 1/beta*log(beta/exp(log_alpha))) |> 
   median_qi()
 
-### Based on the posterior distribution, the modal age at death is very likely between about 46.5 and 46.7 years.
 ```
+
+Based on the posterior distribution, the modal age at death is very likely between about 46.5 and 46.7 years.
+
 
 ## Question
 
@@ -215,9 +220,8 @@ summary(glm(deaths ~ age_c + offset(log(pop)),
   filter(!is.infinite(pop))
         ))
 
-### The glm() is the better classical comparison. The lm() is the least appropriate, as it assumes normal errors, and ignores population. Though the estimates for glm()  are different from those of the Bayesian model, since the former is using ALL the years.
 ```
-
+The glm() is the better classical comparison. The lm() is the least appropriate, as it assumes normal errors, and ignores population. Though the estimates for glm()  are different from those of the Bayesian model, since the former is using ALL the years.
 
 # Model over time
 
@@ -298,10 +302,14 @@ mod |>
   geom_ribbon(aes(ymin = .lower, ymax = .upper), alpha = 0.2)+
   labs(y = "value", title = "Estimates of Gompertz parameters over time")
 
-### β, which represents how quickly  mortality increases with age, increases sharply from ~1990 to ~2000, and the it then levels off / stabilizes
-### log(α), baseline mortality level, has been going down
-### Mortality levels are going down, and mortality is increasing more sharply with age 
 ```
+β, which represents how quickly  mortality increases with age, increases sharply from ~1990 to ~2000, and the it then levels off / stabilizes
+
+log(α), baseline mortality level, has been going down
+
+Mortality levels are going down, and mortality is increasing more sharply with age
+
+
 
 ...and also the mode age over time:
 
@@ -321,7 +329,8 @@ mod |>
 
 Can you forecast mortality rates with this model? If so, how? What are the assumptions behind the forecasts?
 
-### Yes, we can forecast mortality rates using this model by projecting the Gompertz parameters (α and β) forward in time. Future values of the parameters are simulated based on their previous values, and these are then used to generate age-specific mortality rates. 
+Yes, we can forecast mortality rates using this model by projecting the Gompertz parameters (α and β) forward in time. Future values of the parameters are simulated based on their previous values, and these are then used to generate age-specific mortality rates. 
+
 The assumptions behind the forecasts would be that changes in mortality follow a smooth random walk process, that past trends continue into the future, that the Gompertz functional form remains appropriate, and that no major structural changes occur.
 
 # Partial data observed
@@ -410,8 +419,11 @@ mod |>
   scale_fill_brewer(name = "Area", palette = "Set1")+
   labs(title = "Data and estimates of adult mortality by geographic area", y = "log mortality rate")
 
-### Line 5: Fewer / noisier data points; Very wide uncertainty band
 ```
+
+Line 5: Fewer / noisier data points; Very wide uncertainty band
+
+
 ## Compare parameter estimates against the truth
 
 Here's what we estimated:
@@ -426,6 +438,6 @@ And here's the truth (the values underlying the simulation):
 
 ```{r}
 read_rds("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/true_params.rds")
-
-### The model seems to work well. For all 5 areas, true values fall inside credible intervals
 ```
+
+The model seems to work well. For all 5 areas, true values fall inside credible intervals

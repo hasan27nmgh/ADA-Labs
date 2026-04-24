@@ -1,7 +1,7 @@
 ---
 title: "Week 3: Mortality II"
 subtitle: "SOC6708 ADA"
-author: "Hasani Rose"
+author: "Monica Alexander and Hasani Rose"
 format: pdf
 execute: 
   warning: false
@@ -13,10 +13,7 @@ library(tidyverse)
 library(here)
 library(readxl)
 library(janitor)
-install.packages("tinytex")
 
-rm(list = ls())
-options(warn = -1)
 ```
 
 # Decomposition
@@ -104,12 +101,13 @@ asmr |>
             rate_total_contr = sum(rate_contr)) |> 
   mutate(total_diff = age_total_contr+rate_total_contr)
 
-# age_total_contr = −0.0107; The negative sign means Kenya’s age structure lowers its crude death rate relative to Canada. Kenya has a much younger population.
 
-# rate_total_contr = +0.00998;  The positive sign means Kenya’s age-specific mortality risks are higher than Canada’s. Higher risks push Kenya’s crude death rate upward relative to Canada
-
-# total_diff = −0.000724; This is the net difference in crude death rates. Kenya’s crude death rate is only slightly lower than Canada’s, not because mortality is better, but because its youthful age structure masks higher mortality risks
 ```
+age_total_contr = −0.0107; The negative sign means Kenya’s age structure lowers its crude death rate relative to Canada. Kenya has a much younger population.
+
+rate_total_contr = +0.00998;  The positive sign means Kenya’s age-specific mortality risks are higher than Canada’s. Higher risks push Kenya’s crude death rate upward relative to Canada
+
+total_diff = −0.000724; This is the net difference in crude death rates. Kenya’s crude death rate is only slightly lower than Canada’s, not because mortality is better, but because its youthful age structure masks higher mortality risks
 
 Check that the difference is actually the difference between the two CDRs
 
@@ -120,6 +118,7 @@ asmr |>
   summarize(cdr = sum(mx*pop)/sum(pop)) |> # Computes the crude death rate for each country
   summarise(diff = cdr[region=="Kenya"] - cdr[region=="Canada"]) # The difference
 ```
+It is. 
 
 ## Exercise
 
@@ -148,10 +147,8 @@ asmr |>
   summarize(age_total_contr = sum(age_contr), # summing up over age
             rate_total_contr = sum(rate_contr)) |> 
   mutate(total_diff = age_total_contr+rate_total_contr)
-
-## Japan’s higher crude death rate relative to the USA in 2023 is driven primarily by differences in age structure
 ```
-
+The majority of the difference is due to age structure
 
 
 
@@ -189,8 +186,10 @@ df_1950_40 <- df_1950_40 |>
 
 summary(lm(log(male)~age, data = df_1950_40))
 
-## each additional year of age increases mortality by 8.6%
+
 ```
+Each additional year of age increases mortality by 8.6%
+
 
 ### Exercise
 
@@ -219,9 +218,11 @@ for(i in 1:length(years)){ # This loop runs once per year
   
 }
   
-## A decline in baseline adult mortality (α) alongside a gradual increase in the rate of 
-#aging (β). Improvements in survival at adult ages combined with increasing compression of mortality into older age
+
 ```
+
+We can see a decline in baseline adult mortality (α) alongside a gradual increase in the rate of  aging (β). Improvements in survival at adult ages combined with increasing compression of mortality into older age.
+
 
 ## Lee-Carter
 
@@ -350,5 +351,7 @@ dm2_1970 |>
   geom_line(aes(y = lc_fit), color = "red") +
   facet_wrap(~year)
 
-## Slightly changes bx. Does a better job for recent years.
 ```
+
+It slightly changes bx. It does a better job for recent years.
+

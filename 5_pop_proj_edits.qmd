@@ -1,0 +1,292 @@
+---
+title: "Week 5: Population Projections"
+subtitle: "SOC6708 ADA"
+author: "Monica Alexander and Hasani Rose"
+format: pdf
+execute: 
+  warning: false
+  message: false
+---
+
+For this lab, we are going to pick two countries from the WPP data (one high fertility, one low fertility) and do some projections and calculations. 
+
+# Load in data
+
+
+```{r}
+library(tidyverse)
+
+library(tidyr)
+
+library(dplyr)
+```
+
+Loading in the data. For this lab we will need fertility rates, populations by age, and the Lx columns of the life table. 
+
+```{r}
+df <- read_csv("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/WPP2024_Fertility_by_Age5.csv")
+df <- df |> select(Location, Time, ASFR, AgeGrp)
+dl <- read_csv("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/WPP2024_Life_Table_Abridged_Medium_1950-2023.csv")
+dl <- dl |> filter(Variant=="Medium", Sex=="Female")|> select(Location, Time, AgeGrp,Lx)
+d_female <- read_csv("C:/Users/hasan/OneDrive/Desktop/SOC PhD Stuff 2025, 2026/ADA/wpp_pop_clean.csv") |> filter(sex=="Female")
+d_female <- d_female |> 
+  pivot_longer(x0:x100) |> 
+  mutate(age = as.numeric(str_remove(name, "x"))) 
+# create age group (need to sum over later)
+breaks <- c(seq(0,100, 5), Inf)
+labels <- c("0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39",
+            "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", 
+            "75-79", "80-84", "85-89", 
+            "90-94", "95-99", "100+")
+
+d_female$age_group <-  cut(d_female$age, breaks = breaks, labels = labels, right = FALSE)
+```
+
+
+# Population projection
+
+1. pick two countries, 1 with high fertility and 1 with low fertility. Here are the options:
+
+```{r}
+unique(df$Location) 
+
+```
+
+Doing South Korea and Somalia
+
+2. Calculate the NRR for each of the countries in 2020. Confirm that these are one high and one low, based on NRR values. 
+
+```{r}
+df |> 
+  filter(Location == "Republic of Korea"|Location == "Somalia", Time == 2020) |> 
+  left_join(dl) |> 
+  mutate(prod = ASFR/1000*Lx/10^5) |> 
+  group_by(Location) |> 
+  summarize(NRR = sum(prod)*0.4886)
+```
+
+
+Remember: discrete version of NRR is
+
+$$
+NRR = \sum_x {_nL_x} \cdot _nF_x \cdot f_{fab}
+$$
+and the fraction female at birth is something like 0.4886. 
+
+
+## Leslie matrix
+
+3. Create a Leslie matrix for each of your countries based on 2020 rates. The function below will help. This is pretty ugly so if someone want to rewrite it feel free :)
+
+Note: Fx only covers 10-50, but it needs to be 0 for all other age groups (probably easiest to `left_join` `df` to `dl` then replace the `NA` values with 0s).
+Note 2: From the WPP data we have a split first age group, but want to convert this into 0-5. Just sum the Lx values to get $_5L0$
+
+```{r}
+
+leslie <- function(nLx,
+                   nFx, 
+                   n_age_groups=21, # based on 0 to 100+
+                   ffab = 0.4886){
+  L = matrix(0, nrow = n_age_groups, ncol = n_age_groups)
+  L[1,] = ffab * nLx[1]*(nFx[1:n_age_groups]+nFx[2:(n_age_groups+1)]*nLx[2:(n_age_groups+1)]/nLx[1:n_age_groups])/2 # top row 
+  L[1,ncol(L)] <- 0
+  diag(L[2:n_age_groups,1:(n_age_groups-1)]) = nLx[2:n_age_groups] / nLx[1:(n_age_groups-1)] # subdiagonal
+  return(L)
+}
+```
+
+```{r}
+#Republic of Korea
+d_kor <- dl |> 
+  filter(Location == "Republic of Korea", Time == 2020) |> 
+  left_join(df, by = c("Location", "Time", "AgeGrp")) |> 
+  mutate(ASFR = replace_na(ASFR, 0)) |> 
+  mutate(AgeGrp = if_else(AgeGrp %in% c("0", "1-4"), "0-4", AgeGrp)) |> 
+  group_by(AgeGrp) |> 
+  summarize(
+    Lx = sum(Lx) / 1e5,
+    Fx = sum(ASFR) / 1000,
+    .groups = "drop"
+  ) |> 
+  mutate(age = as.numeric(str_remove(AgeGrp, "-.*"))) |> 
+  mutate(age = ifelse(is.na(age), 100, age)) |> 
+  arrange(age)
+
+Lx_kor <- d_kor$Lx
+Fx_kor <- c(d_kor$Fx, 0)
+
+A_kor <- leslie(nLx = Lx_kor, nFx = Fx_kor)
+
+A_kor
+
+# Somalia
+d_som <- dl |> 
+  filter(Location == "Somalia", Time == 2020) |> 
+  left_join(df, by = c("Location", "Time", "AgeGrp")) |> 
+  mutate(ASFR = replace_na(ASFR, 0)) |> 
+  mutate(AgeGrp = if_else(AgeGrp %in% c("0", "1-4"), "0-4", AgeGrp)) |> 
+  group_by(AgeGrp) |> 
+  summarize(
+    Lx = sum(Lx) / 1e5,
+    Fx = sum(ASFR) / 1000,
+    .groups = "drop"
+  ) |> 
+  mutate(age = as.numeric(str_remove(AgeGrp, "-.*"))) |> 
+  mutate(age = ifelse(is.na(age), 100, age)) |> 
+  arrange(age)
+
+Lx_som <- d_som$Lx
+Fx_som <- c(d_som$Fx, 0)
+
+A_som <- leslie(nLx = Lx_som, nFx = Fx_som)
+
+A_som
+
+```
+
+
+4. Confirm that the NRRs from the Leslie matrices are the same as your NRRs above. The formula is:
+
+$$
+NRR = \sum A_{1,j(x)} \frac{_nL_x}{_nL_0}
+$$
+
+where $A$ is the Leslie matrix. I think the easiest way to do this in practice is `A[1,]%*%cumprod(c(1,diag(A[-1,])))`.
+
+```{r}
+A_kor[1,]%*%cumprod(c(1,diag(A_kor[-1,])))
+A_som[1,]%*%cumprod(c(1,diag(A_som[-1,])))
+```
+
+
+5. Get the 2020 populations for your two chosen countries. What does the age distribution look like (plot half an age pyramid). Given the NRRs what do expect the age pyramids ending up to look like?
+
+```{r}
+dpop <- d_female |> 
+  filter(region == "Republic of Korea"|region == "Somalia", year == 2020) |> 
+  group_by(region, age_group) |> 
+  summarize(pop = sum(value))
+
+dpop |> 
+  ggplot(aes(age_group, pop, fill = region)) + 
+  geom_bar(stat = "identity", position = "dodge")+
+  coord_flip()
+
+```
+
+Korea = quite old and low fertility; Somalia = very young and high fertility
+
+Given their NRRs: Korea will continue shrinking and aging. Somalia will continue growing and remain youthful
+
+
+6. Project each population forward 200 years (i.e. 200/5 = 40 projection steps). For each country, you'll want to save every population for each age group and projection step in a matrix, and put the first column as your starting population. So something like this:
+
+```{r}
+
+n <- 5
+
+labels5 <- c(
+  "0-4","5-9","10-14","15-19","20-24","25-29","30-34","35-39",
+  "40-44","45-49","50-54","55-59","60-64","65-69","70-74",
+  "75-79","80-84","85-89","90-94","95-99","100+"
+)
+
+n_age_groups <- length(labels5)
+n_projections <- 200 / n
+years <- seq(from = 2020, to = 2020 + n_projections * n, by = n)
+
+get_initial_pop <- function(country) {
+  d_female |>
+    filter(region == country, year == 2020) |>
+    mutate(age_group = factor(as.character(age_group), levels = labels5)) |>
+    group_by(age_group) |>
+    summarize(pop = sum(value, na.rm = TRUE), .groups = "drop") |>
+    complete(
+      age_group = factor(labels5, levels = labels5),
+      fill = list(pop = 0)
+    ) |>
+    arrange(age_group) |>
+    pull(pop)
+}
+
+# Korea
+initial_kor <- get_initial_pop("Republic of Korea")
+
+K_kor <- matrix(0, nrow = n_age_groups, ncol = n_projections + 1)
+K_kor[, 1] <- initial_kor
+
+for(i in 2:(n_projections + 1)) {
+  K_kor[, i] <- as.vector(A_kor %*% K_kor[, i - 1])
+}
+
+colnames(K_kor) <- years
+rownames(K_kor) <- labels5
+
+# Somalia
+initial_som <- get_initial_pop("Somalia")
+
+K_som <- matrix(0, nrow = n_age_groups, ncol = n_projections + 1)
+K_som[, 1] <- initial_som
+
+for(i in 2:(n_projections + 1)) {
+  K_som[, i] <- as.vector(A_som %*% K_som[, i - 1])
+}
+
+colnames(K_som) <- years
+rownames(K_som) <- labels5
+```
+
+For the next bits, you probably want to take these two matrices and convert them back into a tibble for plotting. Something like this:
+
+```{r, eval=T}
+# Convert matrices to long tibbles (population + proportion)
+matrix_to_long <- function(Kmat, country){
+  as_tibble(Kmat) |>
+    mutate(age_group = labels5,
+           age = seq(0, 100, by = 5)) |>
+    pivot_longer(cols = -c(age_group, age),
+                 names_to = "year",
+                 values_to = "pop") |>
+    mutate(year = as.numeric(year),
+           country = country) |>
+    group_by(country, year) |>
+    mutate(prop = pop / sum(pop)) |>
+    ungroup()
+}
+
+Kdf_long_kor <- matrix_to_long(K_kor, "Republic of Korea")
+Kdf_long_som <- matrix_to_long(K_som, "Somalia")
+
+# Join them together
+Kdf_long <- bind_rows(Kdf_long_kor, Kdf_long_som)
+
+Kdf_long
+```
+
+7a. Plot the total population size over time 
+
+```{r}
+Kdf_long |>
+  group_by(country, year) |>
+  summarize(total_pop = sum(pop), .groups = "drop") |>
+  ggplot(aes(year, total_pop, color = country)) +
+  geom_line() +
+  facet_wrap(~country, scales = "free_y")
+
+```
+
+Korea slightly decreasing, Somalia increasing substantially
+
+7b. Plot the proportion in each age group over time
+
+
+```{r}
+Kdf_long |>
+  ggplot(aes(year, prop, color = factor(age), group = age)) +
+  geom_line(alpha = 0.7) +
+  facet_wrap(~country) +
+  labs(x = "Year", y = "Proportion in age group", color = "Age (start)")
+
+
+```
+Somalia is pretty stable earlier on; Korea has a lot of movement in the early years and seems to somewhat stabilize later on 
