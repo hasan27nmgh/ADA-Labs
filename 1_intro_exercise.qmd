@@ -1,7 +1,11 @@
 ---
 title: "Week 1: Intro to demographic concepts, Exercise"
 subtitle: "SOC6708 ADA"
-author: "Hasani Rose"
+author: "Monica Alexander and Hasani Rose"
+format: pdf
+execute: 
+  warning: false
+  message: false
 ---
 
 # Read in the data 
@@ -39,6 +43,7 @@ d <- d  |>
   mutate(across(x0:x100, as.numeric))
 
 head(d)
+
 ```
 
 Mortality data:
@@ -289,6 +294,9 @@ ggplot(aes(x = age, y = population, fill = sex)) +
 
 2. Based on the shape and change in population pyramids in 1, do you think the population growth rate in each of your chosen countries is positive or negative in recent years?
 
+For Ghana, the pyramid has a very wide base that gets bigger from year to year (it is largest in 2020. This means lots of young people and births. This suggests population growth is positive (and relatively high) in recent years.
+
+For Singapore, the pyramid becomes more rectangular, with a narrower base. But it seemingly has still gotten larger over time. Hence, I think the population growth is positive, but significantly less than Ghana
 
 3. Confirm your guesses in 2 by plotting population over time in both countries. 
 
@@ -300,6 +308,8 @@ d_long1 |>
   ggplot(aes(year, pop, color = region))+
   geom_line()
 ```
+
+It seems my guesses were correct.
 
 4. Taking the US population in 2000 as the standard population, calculate the standardized mortality rates for US in 2023 and Australia in 2023. How much higher was the death rate in US compared to Australia?
 
@@ -324,6 +334,5 @@ asmr1 |>
   summarize(asdr = sum(prod)/sum(std_pop)) |> 
   summarize(ratio = asdr[region=="United States of America"]/asdr[region == "Australia"])
 ```
-
-
+The death rate of the US is higher. It is 1.38 times that of Australia.
 
